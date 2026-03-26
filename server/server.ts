@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 dotenv.config({ path: '.env.local' });
 
 import authRoutes from './routes/auth';
+import verificationRoutes from './routes/verification';
 import sessionRoutes from './routes/sessions';
 import profileRoutes from './routes/profile';
 import achievementRoutes from './routes/achievements';

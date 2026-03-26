@@ -77,10 +77,16 @@ export interface UserProfile {
 }
 
 export const authApi = {
-  signup: (email: string, password: string, displayName?: string) =>
+  sendCode: (email: string) =>
+    request<{ message: string; expiresIn: number }>('/auth/send-code', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    }),
+
+  signup: (email: string, password: string, verificationCode: string, displayName?: string) =>
     request<AuthResponse>('/auth/signup', {
       method: 'POST',
-      body: JSON.stringify({ email, password, displayName }),
+      body: JSON.stringify({ email, password, verificationCode, displayName }),
     }),
 
   login: (email: string, password: string) =>

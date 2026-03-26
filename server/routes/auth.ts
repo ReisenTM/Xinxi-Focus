@@ -1,15 +1,26 @@
 import { Router, Request, Response } from 'express';
 import { supabaseAdmin } from '../supabase';
 import { authMiddleware, AuthenticatedRequest } from '../middleware/auth';
+import { verifyCode } from './verification';
 
 const router = Router();
 
 // POST /api/auth/signup — 注册
 router.post('/signup', async (req: Request, res: Response) => {
-  const { email, password, displayName } = req.body;
+  const { email, password, displayName, verificationCode } = req.body;
 
   if (!email || !password) {
     return res.status(400).json({ error: '请提供邮箱和密码' });
+  }
+
+  if (!verificationCode) {
+    return res.status(400).json({ error: '请提供验证码' });
+  }
+
+  // 校验验证码
+  const verification = verifyCode(email, verificationCode);
+  if (!verification.valid) {
+    return res.status(400).json({ error: verification.error });
   }
 
   try {

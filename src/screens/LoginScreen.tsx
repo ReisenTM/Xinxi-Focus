@@ -1,7 +1,8 @@
-import { useState } from 'react';
-import { motion } from 'motion/react';
-import { LogIn, ShieldCheck, Sparkles, Zap, MessageCircle } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { LogIn, MessageCircle, Mail, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { authApi } from '../lib/api';
 
 interface LoginScreenProps {
   onLogin: () => void;
@@ -19,14 +20,76 @@ export function LoginScreen({ onLogin, onOpenSettings, onClose }: LoginScreenPro
   const [displayName, setDisplayName] = useState('');
   const [error, setError] = useState('');
 
-  const handleSubmit = async () => {
-    if (!email || !password) {
-      setError('请填写邮箱和密码');
+  // 验证码相关
+  const [codeSent, setCodeSent] = useState(false);
+  const [verificationCode, setVerificationCode] = useState('');
+  const [countdown, setCountdown] = useState(0);
+  const [isSendingCode, setIsSendingCode] = useState(false);
+  const countdownRef = useRef<ReturnType<typeof setInterval>>();
+
+  useEffect(() => {
+    return () => {
+      if (countdownRef.current) clearInterval(countdownRef.current);
+    };
+  }, []);
+
+  const startCountdown = () => {
+    setCountdown(60);
+    countdownRef.current = setInterval(() => {
+      setCountdown(prev => {
+        if (prev <= 1) {
+          clearInterval(countdownRef.current);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  const handleSendCode = async () => {
+    if (!email) {
+      setError('请填写邮箱');
       return;
     }
-    if (password.length < 6) {
-      setError('密码至少需要 6 个字符');
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError('请输入有效的邮箱地址');
       return;
+    }
+    if (!password || password.length < 6) {
+      setError('请填写密码（至少 6 位）');
+      return;
+    }
+
+    setIsSendingCode(true);
+    setError('');
+
+    try {
+      await authApi.sendCode(email);
+      setCodeSent(true);
+      startCountdown();
+    } catch (err: any) {
+      setError(err.message || '验证码发送失败');
+    } finally {
+      setIsSendingCode(false);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (isSignup) {
+      if (!verificationCode) {
+        setError('请输入验证码');
+        return;
+      }
+      if (verificationCode.length !== 6) {
+        setError('验证码为 6 位数字');
+        return;
+      }
+    } else {
+      if (!email || !password) {
+        setError('请填写邮箱和密码');
+        return;
+      }
     }
 
     setIsLoading(true);
@@ -34,7 +97,7 @@ export function LoginScreen({ onLogin, onOpenSettings, onClose }: LoginScreenPro
 
     try {
       if (isSignup) {
-        await signup(email, password, displayName || undefined);
+        await signup(email, password, verificationCode, displayName || undefined);
       } else {
         await login(email, password);
       }
@@ -44,6 +107,13 @@ export function LoginScreen({ onLogin, onOpenSettings, onClose }: LoginScreenPro
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const resetSignupState = () => {
+    setCodeSent(false);
+    setVerificationCode('');
+    setCountdown(0);
+    if (countdownRef.current) clearInterval(countdownRef.current);
   };
 
   return (
@@ -91,19 +161,23 @@ export function LoginScreen({ onLogin, onOpenSettings, onClose }: LoginScreenPro
         </div>
 
         {/* Error Display */}
-        {error && (
-          <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-error-container text-on-error-container px-4 py-3 rounded-xl text-sm font-medium"
-          >
-            {error}
-          </motion.div>
-        )}
+        <AnimatePresence>
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="bg-error-container text-on-error-container px-4 py-3 rounded-xl text-sm font-medium"
+            >
+              {error}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-        {/* Email/Password Form */}
+        {/* Form */}
         <div className="space-y-3 text-left">
-          {isSignup && (
+          {/* 注册模式: 昵称 */}
+          {isSignup && !codeSent && (
             <div>
               <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1 block px-1">昵称</label>
               <input
@@ -115,6 +189,8 @@ export function LoginScreen({ onLogin, onOpenSettings, onClose }: LoginScreenPro
               />
             </div>
           )}
+
+          {/* 邮箱 (注册验证码已发送后只读) */}
           <div>
             <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1 block px-1">邮箱</label>
             <input
@@ -122,43 +198,122 @@ export function LoginScreen({ onLogin, onOpenSettings, onClose }: LoginScreenPro
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="your@email.com"
-              className="w-full px-4 py-3.5 bg-surface-container-lowest border border-outline-variant/20 rounded-xl text-on-surface placeholder-on-surface-variant/40 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all"
+              readOnly={isSignup && codeSent}
+              className={`w-full px-4 py-3.5 bg-surface-container-lowest border border-outline-variant/20 rounded-xl text-on-surface placeholder-on-surface-variant/40 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all ${isSignup && codeSent ? 'opacity-60' : ''}`}
             />
           </div>
-          <div>
-            <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1 block px-1">密码</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="至少 6 位"
-              onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
-              className="w-full px-4 py-3.5 bg-surface-container-lowest border border-outline-variant/20 rounded-xl text-on-surface placeholder-on-surface-variant/40 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all"
-            />
-          </div>
+
+          {/* 密码 (注册验证码已发送后隐藏) */}
+          {!(isSignup && codeSent) && (
+            <div>
+              <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1 block px-1">密码</label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="至少 6 位"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    if (isSignup) handleSendCode();
+                    else handleSubmit();
+                  }
+                }}
+                className="w-full px-4 py-3.5 bg-surface-container-lowest border border-outline-variant/20 rounded-xl text-on-surface placeholder-on-surface-variant/40 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all"
+              />
+            </div>
+          )}
+
+          {/* 验证码输入 (注册第二步) */}
+          <AnimatePresence>
+            {isSignup && codeSent && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="space-y-3"
+              >
+                <div className="flex items-center gap-2 px-1 py-2">
+                  <ShieldCheck className="w-4 h-4 text-primary" />
+                  <span className="text-xs text-primary font-bold">验证码已发送至 {email}</span>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mb-1 block px-1">验证码</label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={6}
+                    value={verificationCode}
+                    onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ''))}
+                    placeholder="请输入 6 位验证码"
+                    onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+                    autoFocus
+                    className="w-full px-4 py-3.5 bg-surface-container-lowest border border-outline-variant/20 rounded-xl text-on-surface placeholder-on-surface-variant/40 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary/20 transition-all text-center text-xl tracking-[0.5em] font-mono font-bold"
+                  />
+                </div>
+                <button
+                  onClick={handleSendCode}
+                  disabled={countdown > 0 || isSendingCode}
+                  className="w-full py-2.5 text-sm font-bold text-primary hover:text-primary/80 disabled:text-on-surface-variant/40 transition-colors"
+                >
+                  {isSendingCode ? '发送中...' : countdown > 0 ? `重新发送 (${countdown}s)` : '重新发送验证码'}
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Action Section */}
         <div className="space-y-4">
-          <button
-            onClick={handleSubmit}
-            disabled={isLoading}
-            className="w-full flex items-center justify-center gap-3 py-4 bg-primary text-on-primary rounded-2xl font-headline font-bold shadow-lg shadow-primary/20 hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-50"
-          >
-            {isLoading ? (
-              <div className="w-5 h-5 border-2 border-on-primary/30 border-t-on-primary rounded-full animate-spin" />
-            ) : (
-              <>
-                <LogIn className="w-5 h-5" />
-                <span>{isSignup ? '注册账号' : '邮箱登录'}</span>
-              </>
-            )}
-          </button>
+          {/* 主按钮 */}
+          {isSignup && !codeSent ? (
+            /* 注册第一步: 发送验证码 */
+            <button
+              onClick={handleSendCode}
+              disabled={isSendingCode}
+              className="w-full flex items-center justify-center gap-3 py-4 bg-primary text-on-primary rounded-2xl font-headline font-bold shadow-lg shadow-primary/20 hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-50"
+            >
+              {isSendingCode ? (
+                <div className="w-5 h-5 border-2 border-on-primary/30 border-t-on-primary rounded-full animate-spin" />
+              ) : (
+                <>
+                  <Mail className="w-5 h-5" />
+                  <span>发送验证码</span>
+                </>
+              )}
+            </button>
+          ) : (
+            /* 登录 / 注册第二步: 提交 */
+            <button
+              onClick={handleSubmit}
+              disabled={isLoading}
+              className="w-full flex items-center justify-center gap-3 py-4 bg-primary text-on-primary rounded-2xl font-headline font-bold shadow-lg shadow-primary/20 hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-50"
+            >
+              {isLoading ? (
+                <div className="w-5 h-5 border-2 border-on-primary/30 border-t-on-primary rounded-full animate-spin" />
+              ) : (
+                <>
+                  <LogIn className="w-5 h-5" />
+                  <span>{isSignup ? '注册账号' : '邮箱登录'}</span>
+                </>
+              )}
+            </button>
+          )}
+
+          {/* 返回上一步 (注册第二步时显示) */}
+          {isSignup && codeSent && (
+            <button
+              onClick={resetSignupState}
+              className="w-full py-2 text-on-surface-variant font-bold text-xs hover:text-on-surface transition-colors"
+            >
+              ← 返回修改信息
+            </button>
+          )}
 
           <button
             onClick={() => {
               setIsSignup(!isSignup);
               setError('');
+              resetSignupState();
             }}
             className="w-full py-3 text-on-surface-variant font-bold text-sm hover:text-primary transition-colors"
           >
