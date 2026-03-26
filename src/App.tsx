@@ -11,9 +11,18 @@ import { HistoryScreen } from './screens/HistoryScreen';
 import { LoginScreen } from './screens/LoginScreen';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { sessionsApi, FocusSession } from './lib/api';
+import { StatusBar, Style } from '@capacitor/status-bar';
+import { Capacitor } from '@capacitor/core';
 
 function AppContent() {
   const { isLoggedIn, isLoading, logout, refreshUser } = useAuth();
+  
+  useEffect(() => {
+    if (Capacitor.isNativePlatform()) {
+      StatusBar.setOverlaysWebView({ overlay: true });
+      StatusBar.setStyle({ style: Style.Default });
+    }
+  }, []);
   const [showLogin, setShowLogin] = useState(false);
   const [activeTab, setActiveTab] = useState('focus');
   const [showSettings, setShowSettings] = useState(false);

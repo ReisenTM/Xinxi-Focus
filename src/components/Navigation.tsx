@@ -7,8 +7,11 @@ interface TopNavProps {
 
 export function TopNav({ title = '心隙专注', onOpenSettings }: TopNavProps) {
   return (
-    <header className="fixed top-0 w-full flex justify-between items-center px-6 h-16 glass-nav z-50 border-b border-outline-variant/5">
-      <div className="flex items-center gap-4">
+    <header 
+      style={{ paddingTop: 'env(safe-area-inset-top)' }}
+      className="fixed top-0 w-full flex justify-between items-center px-6 h-[calc(4rem+env(safe-area-inset-top))] glass-nav z-50 border-b border-outline-variant/5"
+    >
+      <div className="flex items-center gap-4 mt-2">
         <button 
           onClick={onOpenSettings}
           className="material-symbols-outlined text-primary hover:opacity-80 transition-opacity duration-400 active:scale-95 p-2 -ml-2 rounded-full"
@@ -36,7 +39,10 @@ export function BottomNav({ activeTab, onChangeTab }: BottomNavProps) {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-8 pb-8 pt-4 glass-nav rounded-t-[3rem] shadow-[0_-4px_48px_0_rgba(0,0,0,0.1)] dark:shadow-[0_-4px_48px_0_rgba(0,0,0,0.4)] border-t border-outline-variant/10">
+    <nav 
+      style={{ paddingBottom: 'calc(2rem + env(safe-area-inset-bottom))' }}
+      className="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-8 pt-4 glass-nav rounded-t-[3rem] shadow-[0_-4px_48px_0_rgba(0,0,0,0.1)] dark:shadow-[0_-4px_48px_0_rgba(0,0,0,0.4)] border-t border-outline-variant/10"
+    >
       {tabs.map((tab) => {
         const isActive = activeTab === tab.id;
         return (
