@@ -127,10 +127,6 @@ function AppContent() {
   };
 
   const handleTabChange = (tab: string) => {
-    if (!isLoggedIn && (tab === 'stats' || tab === 'profile')) {
-      setShowLogin(true);
-      return;
-    }
     setActiveTab(tab);
   };
 
@@ -158,7 +154,7 @@ function AppContent() {
                 todayCount={stats.todayCount}
               />
             )}
-            {activeTab === 'stats' && isLoggedIn && (
+            {activeTab === 'stats' && (
               <StatsScreen 
                 key="stats" 
                 sessions={sessions}
@@ -167,11 +163,11 @@ function AppContent() {
                 onViewAllHistory={() => setShowHistory(true)}
               />
             )}
-            {activeTab === 'profile' && isLoggedIn && (
+            {activeTab === 'profile' && (
               <ProfileScreen 
                 key="profile" 
                 onLogout={handleLogout}
-                onOpenSubscription={() => setShowSubscription(true)}
+                onOpenSubscription={() => {}} // No-op in free version
               />
             )}
           </AnimatePresence>
@@ -181,20 +177,6 @@ function AppContent() {
       </div>
 
       <AnimatePresence>
-        {showLogin && (
-          <LoginScreen 
-            key="login"
-            onLogin={() => {
-              setShowLogin(false);
-            }} 
-            onOpenSettings={(view) => {
-              setSettingsInitialView(view || 'main');
-              setShowSettings(true);
-            }}
-            onClose={() => setShowLogin(false)}
-          />
-        )}
-
         {showSettings && (
           <SettingsScreen 
             key="settings" 
@@ -210,13 +192,6 @@ function AppContent() {
           />
         )}
 
-        {showSubscription && (
-          <SubscriptionScreen 
-            key="subscription" 
-            onBack={() => setShowSubscription(false)} 
-          />
-        )}
-        
         {showAchievements && (
           <AchievementsScreen 
             key="achievements" 

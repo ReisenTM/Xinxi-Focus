@@ -1,6 +1,8 @@
+import React, { useRef, useState } from 'react';
 import { motion } from 'motion/react';
-import { Crown, Sparkles } from 'lucide-react';
+import { Crown, Sparkles, Loader2 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { profileApi } from '../lib/api';
 
 interface ProfileScreenProps {
   onLogout: () => void;
@@ -9,7 +11,7 @@ interface ProfileScreenProps {
 }
 
 export function ProfileScreen({ onLogout, onOpenSubscription }: ProfileScreenProps) {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
 
   const displayName = user?.displayName || '用户';
   const email = user?.email || '';
@@ -17,6 +19,68 @@ export function ProfileScreen({ onLogout, onOpenSubscription }: ProfileScreenPro
   const streakDays = user?.streakDays || 0;
   const createdAt = user?.createdAt ? new Date(user.createdAt).getFullYear() : new Date().getFullYear();
   const avatarUrl = user?.avatarUrl || '';
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploading, setIsUploading] = useState(false);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      alert('请选择图片文件');
+      return;
+    }
+
+    setIsUploading(true);
+
+    try {
+      // 1. 读取文件
+      const reader = new FileReader();
+      const base64Str = await new Promise<string>((resolve, reject) => {
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      // 2. 加载到 Image 对象
+      const img = new Image();
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+        img.src = base64Str;
+      });
+
+      // 3. Canvas 裁切压缩 (200x200)
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Could not get canvas context');
+
+      canvas.width = 200;
+      canvas.height = 200;
+
+      const size = Math.min(img.width, img.height);
+      const startX = (img.width - size) / 2;
+      const startY = (img.height - size) / 2;
+
+      ctx.drawImage(img, startX, startY, size, size, 0, 0, 200, 200);
+
+      const compressedBase64 = canvas.toDataURL('image/webp', 0.8);
+
+      // 4. 调用 API 上传
+      await profileApi.update({ avatarUrl: compressedBase64 });
+      
+      // 5. 刷新全局用户信息
+      await refreshUser();
+      
+    } catch (err) {
+      console.error('Avatar upload failed:', err);
+      alert('头像上传失败，请稍后重试');
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
 
   return (
     <motion.main
@@ -29,7 +93,28 @@ export function ProfileScreen({ onLogout, onOpenSubscription }: ProfileScreenPro
       <section className="space-y-6">
         <div className="flex items-center gap-6">
           <div className="relative">
-            <div className="w-24 h-24 rounded-xl overflow-hidden shadow-sm bg-primary/10 flex items-center justify-center">
+            <input 
+              type="file" 
+              accept="image/*" 
+              className="hidden" 
+              ref={fileInputRef}
+              onChange={handleFileChange}
+            />
+            <button 
+              onClick={() => !isUploading && fileInputRef.current?.click()}
+              disabled={isUploading}
+              className="w-24 h-24 rounded-xl overflow-hidden shadow-sm bg-primary/10 flex items-center justify-center relative group transition-transform active:scale-95"
+            >
+              {isUploading && (
+                <div className="absolute inset-0 bg-background/50 backdrop-blur-sm z-10 flex items-center justify-center">
+                  <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                </div>
+              )}
+              
+              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity z-10 flex items-center justify-center">
+                <span className="text-white text-xs font-bold font-headline">修改头像</span>
+              </div>
+
               {avatarUrl ? (
                 <img
                   className="w-full h-full object-cover"
@@ -41,7 +126,7 @@ export function ProfileScreen({ onLogout, onOpenSubscription }: ProfileScreenPro
                   {displayName.charAt(0).toUpperCase()}
                 </span>
               )}
-            </div>
+            </button>
             <div className="absolute -bottom-2 -right-2 bg-primary text-on-primary rounded-full p-1.5 shadow-md">
               <span
                 className="material-symbols-outlined text-sm"
@@ -60,46 +145,6 @@ export function ProfileScreen({ onLogout, onOpenSubscription }: ProfileScreenPro
             </p>
           </div>
         </div>
-
-        {/* Subscription Entry Point */}
-        <motion.button
-          onClick={onOpenSubscription}
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
-          className="w-full relative overflow-hidden p-6 rounded-[2rem] bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/20 group"
-        >
-          <div className="absolute top-0 right-0 p-4 opacity-20 group-hover:opacity-40 transition-opacity">
-            <Crown className="w-16 h-16 text-primary rotate-12" />
-          </div>
-          
-          <div className="flex items-center gap-4 relative z-10">
-            <div className="w-12 h-12 bg-primary rounded-2xl flex items-center justify-center shadow-lg shadow-primary/20">
-              <Crown className="w-6 h-6 text-on-primary" />
-            </div>
-            <div className="flex-1 text-left">
-              <div className="flex items-center gap-2">
-                <h3 className="font-headline font-bold text-on-surface">Focus Pro 会员</h3>
-                <motion.div
-                  animate={{ 
-                    scale: [1, 1.2, 1],
-                    rotate: [0, 10, -10, 0]
-                  }}
-                  transition={{ 
-                    duration: 2,
-                    repeat: Infinity,
-                    ease: "easeInOut"
-                  }}
-                >
-                  <Sparkles className="w-4 h-4 text-primary" />
-                </motion.div>
-              </div>
-              <p className="text-xs text-on-surface-variant font-medium">解锁所有高级功能</p>
-            </div>
-            <div className="bg-primary text-on-primary text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full">
-              立即开启
-            </div>
-          </div>
-        </motion.button>
 
         {/* Points Bento Grid */}
         <div className="grid grid-cols-2 gap-4">
@@ -131,14 +176,13 @@ export function ProfileScreen({ onLogout, onOpenSubscription }: ProfileScreenPro
 
       {/* Settings Section */}
       <section className="space-y-10">
-        {/* Dangerous Area / Logout */}
         <div className="pt-4 pb-12">
           <button 
             onClick={onLogout}
             className="w-full flex items-center justify-center gap-2 py-4 rounded-xl border border-error/20 text-error font-headline font-bold hover:bg-error/5 transition-colors duration-400"
           >
             <span className="material-symbols-outlined text-sm">logout</span>
-            <span>退出</span>
+            <span>退出账户</span>
           </button>
         </div>
       </section>

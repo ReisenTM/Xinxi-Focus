@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { authApi, setAccessToken, getAccessToken, UserProfile } from '../lib/api';
+import { authApi, profileApi, UserProfile } from '../lib/api';
 
 interface AuthContextType {
   user: UserProfile | null;
@@ -14,75 +14,53 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<UserProfile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [user, setUser] = useState<UserProfile | null>({
+    id: 'local-user',
+    email: 'local@focus.app',
+    displayName: '专注于者',
+    avatarUrl: localStorage.getItem('focus_local_avatar') || '',
+    focusPoints: 0,
+    streakDays: 0,
+    isPro: true,
+  });
+  const [isLoading, setIsLoading] = useState(false);
 
   // Check for existing session on mount
   useEffect(() => {
-    const token = getAccessToken();
-    if (token) {
-      authApi.getMe()
-        .then(profile => {
-          setUser(profile);
-        })
-        .catch(() => {
-          setAccessToken(null);
-        })
-        .finally(() => {
-          setIsLoading(false);
-        });
-    } else {
-      setIsLoading(false);
+    const saved = localStorage.getItem('focus_local_profile');
+    if (saved) {
+      setUser(JSON.parse(saved));
     }
+    setIsLoading(false);
   }, []);
 
   const login = async (email: string, password: string) => {
+    setIsLoading(true);
     const result = await authApi.login(email, password);
-    setAccessToken(result.session.accessToken);
-    setUser({
-      id: result.user.id,
-      email: result.user.email,
-      displayName: result.user.displayName,
-      avatarUrl: result.user.avatarUrl || '',
-      focusPoints: result.user.focusPoints || 0,
-      streakDays: result.user.streakDays || 0,
-      isPro: result.user.isPro || false,
-    });
+    setUser(result.user);
+    setIsLoading(false);
   };
 
   const signup = async (email: string, password: string, verificationCode: string, displayName?: string) => {
+    setIsLoading(true);
     const result = await authApi.signup(email, password, verificationCode, displayName);
-    setAccessToken(result.session.accessToken);
-    setUser({
-      id: result.user.id,
-      email: result.user.email,
-      displayName: result.user.displayName,
-      avatarUrl: result.user.avatarUrl || '',
-      focusPoints: result.user.focusPoints || 0,
-      streakDays: result.user.streakDays || 0,
-      isPro: result.user.isPro || false,
-    });
+    setUser(result.user);
+    setIsLoading(false);
   };
 
   const logout = () => {
-    authApi.logout().catch(() => {});
-    setAccessToken(null);
     setUser(null);
   };
 
   const refreshUser = async () => {
-    try {
-      const profile = await authApi.getMe();
-      setUser(profile);
-    } catch {
-      // Ignore errors
-    }
+    const updated = await profileApi.get();
+    setUser(updated);
   };
 
   return (
     <AuthContext.Provider value={{
       user,
-      isLoggedIn: !!user,
+      isLoggedIn: true, // Always true in this branch
       isLoading,
       login,
       signup,
