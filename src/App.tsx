@@ -20,7 +20,6 @@ function AppContent() {
   useEffect(() => {
     if (Capacitor.isNativePlatform()) {
       StatusBar.setOverlaysWebView({ overlay: true });
-      StatusBar.setStyle({ style: Style.Default });
     }
   }, []);
   const [showLogin, setShowLogin] = useState(false);
@@ -42,8 +41,14 @@ function AppContent() {
   useEffect(() => {
     if (isDarkMode) {
       document.documentElement.classList.add('dark');
+      if (Capacitor.isNativePlatform()) {
+        StatusBar.setStyle({ style: Style.Dark });
+      }
     } else {
       document.documentElement.classList.remove('dark');
+      if (Capacitor.isNativePlatform()) {
+        StatusBar.setStyle({ style: Style.Light });
+      }
     }
   }, [isDarkMode]);
 
