@@ -193,7 +193,7 @@ export function SettingsScreen({ onBack, isDarkMode, onToggleDarkMode, onLogout,
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-4">
         <button 
-          onClick={() => window.location.href = 'mailto:support@focus-app.com?subject=心隙专注 - 用户反馈'}
+          onClick={() => window.location.href = 'mailto:s3068272040@gmail.com?subject=心隙专注 - 用户反馈'}
           className="flex items-center gap-4 p-4 bg-surface-container-lowest rounded-2xl border border-outline-variant/10 hover:bg-surface-container-low transition-colors text-left"
         >
           <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
@@ -201,7 +201,7 @@ export function SettingsScreen({ onBack, isDarkMode, onToggleDarkMode, onLogout,
           </div>
           <div>
             <h4 className="font-bold">邮件反馈</h4>
-            <p className="text-xs text-on-surface-variant">support@focus-app.com</p>
+            <p className="text-xs text-on-surface-variant">s3068272040@gmail.com</p>
           </div>
         </button>
       </div>
