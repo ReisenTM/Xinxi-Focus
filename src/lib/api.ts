@@ -79,7 +79,7 @@ export interface UserProfile {
 const DEFAULT_PROFILE: UserProfile = {
   id: 'local-user',
   email: 'local@focus.app',
-  displayName: '专注于者',
+  displayName: '专注者',
   avatarUrl: '',
   focusPoints: 0,
   streakDays: 0,

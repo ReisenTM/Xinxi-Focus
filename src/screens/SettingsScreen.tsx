@@ -23,16 +23,6 @@ export function SettingsScreen({ onBack, isDarkMode, onToggleDarkMode, onLogout,
     {
       title: '账户设置',
       items: [
-        ...(isLoggedIn ? [{ icon: User, label: '个人资料', value: 's3068272040@gmail.com' }] : []),
-        { 
-          icon: Cloud, 
-          label: 'iCloud 同步', 
-          toggle: true, 
-          active: iCloudSyncEnabled,
-          badge: 'PRO',
-          disabled: !isLoggedIn,
-          onAction: isLoggedIn ? () => setICloudSyncEnabled(!iCloudSyncEnabled) : undefined
-        },
         { 
           icon: Bell, 
           label: '通知提醒', 
@@ -139,17 +129,7 @@ export function SettingsScreen({ onBack, isDarkMode, onToggleDarkMode, onLogout,
           </div>
         ))}
 
-        {isLoggedIn && (
-          <div className="mt-12 px-6">
-            <button 
-              onClick={onLogout}
-              className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl bg-error-container text-on-error-container font-headline font-bold hover:opacity-90 active:scale-[0.98] transition-all"
-            >
-              <LogOut className="w-5 h-5" />
-              退出登录
-            </button>
-          </div>
-        )}
+
 
         <div className="mt-8 text-center space-y-2">
           <div className="flex items-center justify-center gap-4 text-[10px] font-bold text-on-surface-variant/60 uppercase tracking-widest">

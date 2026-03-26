@@ -17,7 +17,9 @@ export function ProfileScreen({ onLogout, onOpenSubscription }: ProfileScreenPro
   const email = user?.email || '';
   const focusPoints = user?.focusPoints || 0;
   const streakDays = user?.streakDays || 0;
-  const createdAt = user?.createdAt ? new Date(user.createdAt).getFullYear() : new Date().getFullYear();
+  const createdAt = user?.createdAt 
+    ? new Date(user.createdAt).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' })
+    : new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
   const avatarUrl = user?.avatarUrl || '';
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -141,7 +143,7 @@ export function ProfileScreen({ onLogout, onOpenSubscription }: ProfileScreenPro
               {displayName}
             </h2>
             <p className="text-on-surface-variant text-sm font-medium">
-              {createdAt}年加入心隙专注
+              于 {createdAt} 加入心隙专注
             </p>
           </div>
         </div>
@@ -174,18 +176,7 @@ export function ProfileScreen({ onLogout, onOpenSubscription }: ProfileScreenPro
         </div>
       </section>
 
-      {/* Settings Section */}
-      <section className="space-y-10">
-        <div className="pt-4 pb-12">
-          <button 
-            onClick={onLogout}
-            className="w-full flex items-center justify-center gap-2 py-4 rounded-xl border border-error/20 text-error font-headline font-bold hover:bg-error/5 transition-colors duration-400"
-          >
-            <span className="material-symbols-outlined text-sm">logout</span>
-            <span>退出账户</span>
-          </button>
-        </div>
-      </section>
+
     </motion.main>
   );
 }
