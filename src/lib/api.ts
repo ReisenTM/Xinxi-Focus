@@ -237,15 +237,77 @@ export interface AchievementsResponse {
 
 export const achievementsApi = {
   list: async () => {
-    // Return all achievements as unlocked or with progress for testing in free version
+    const savedSessions = localStorage.getItem('focus_offline_sessions');
+    const sessions: FocusSession[] = savedSessions ? JSON.parse(savedSessions) : [];
+    
+    // 1. 连续专注天数 (静心者 - streak_5)
+    // 获取所有唯一日期并排序
+    const dates = Array.from(new Set(sessions.map(s => s.fullDate.split('T')[0]))).sort();
+    let maxStreak = 0;
+    let currentStreak = 0;
+    if (dates.length > 0) {
+      currentStreak = 1;
+      maxStreak = 1;
+      for (let i = 1; i < dates.length; i++) {
+        const d1 = new Date(dates[i-1]);
+        const d2 = new Date(dates[i]);
+        const diff = (d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24);
+        if (diff === 1) {
+          currentStreak++;
+        } else {
+          currentStreak = 1;
+        }
+        maxStreak = Math.max(maxStreak, currentStreak);
+      }
+    }
+
+    // 2. 单次最长时长 (专注大师 - focus_60min)
+    const longestSession = sessions.length > 0 ? Math.max(...sessions.map(s => s.duration)) : 0;
+    const focus60Progress = longestSession >= 3600 ? 1 : 0;
+
+    // 3. 夜猫子 (night_owl)
+    const hasNightFocus = sessions.some(s => {
+      const hour = new Date(s.completedAt).getHours();
+      return hour >= 0 && hour < 5;
+    });
+
+    const achievements: Achievement[] = [
+      { 
+        id: 'streak_5', 
+        title: '静心者', 
+        description: '连续专注 5 天', 
+        icon: 'emoji_events', 
+        total: 5, 
+        progress: Math.min(maxStreak, 5), 
+        unlocked: maxStreak >= 5, 
+        unlockedAt: null 
+      },
+      { 
+        id: 'focus_60min', 
+        title: '专注大师', 
+        description: '单次专注 60 分钟', 
+        icon: 'workspace_premium', 
+        total: 1, 
+        progress: focus60Progress, 
+        unlocked: focus60Progress >= 1, 
+        unlockedAt: focus60Progress >= 1 ? new Date().toISOString() : null 
+      },
+      { 
+        id: 'night_owl', 
+        title: '夜猫子', 
+        description: '在午夜后专注', 
+        icon: 'nightlight', 
+        total: 1, 
+        progress: hasNightFocus ? 1 : 0, 
+        unlocked: hasNightFocus, 
+        unlockedAt: hasNightFocus ? new Date().toISOString() : null 
+      },
+    ];
+
     return {
-      achievements: [
-        { id: 'streak_5', title: '静心者', description: '连续专注 5 天', icon: 'emoji_events', total: 5, progress: 2, unlocked: false, unlockedAt: null },
-        { id: 'focus_60min', title: '专注大师', description: '单次专注 60 分钟', icon: 'workspace_premium', total: 1, progress: 1, unlocked: true, unlockedAt: new Date().toISOString() },
-        { id: 'night_owl', title: '夜猫子', description: '在午夜后专注', icon: 'nightlight', total: 1, progress: 0, unlocked: false, unlockedAt: null },
-      ],
-      totalCount: 12,
-      unlockedCount: 1
+      achievements,
+      totalCount: achievements.length,
+      unlockedCount: achievements.filter(a => a.unlocked).length
     };
   },
 };
