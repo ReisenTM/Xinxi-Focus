@@ -13,7 +13,7 @@ const PLANS = [
     price: '¥18',
     period: '/月',
     description: '适合短期专注体验',
-    features: ['解锁所有拼图', '无限制专注历史', '专属会员标识'],
+    features: ['无限制专注历史', '专属会员标识'],
     popular: false,
   },
   {
@@ -22,7 +22,7 @@ const PLANS = [
     price: '¥45',
     period: '/季',
     description: '建立持久专注习惯',
-    features: ['解锁所有拼图', '无限制专注历史', '专属会员标识', '多端数据同步'],
+    features: ['无限制专注历史', '专属会员标识', '多端数据同步'],
     popular: true,
   },
   {
@@ -31,7 +31,7 @@ const PLANS = [
     price: '¥128',
     period: '',
     description: '终身享受极致专注',
-    features: ['解锁所有拼图', '无限制专注历史', '专属会员标识', '多端数据同步', '未来所有新功能'],
+    features: ['无限制专注历史', '专属会员标识', '多端数据同步', '未来所有新功能'],
     popular: false,
   },
 ];
@@ -123,7 +123,6 @@ export function SubscriptionScreen({ onBack }: SubscriptionScreenProps) {
         <div className="grid grid-cols-3 gap-4 py-4">
           {[
             { icon: Zap, label: '极速同步' },
-            { icon: Sparkles, label: '专属拼图' },
             { icon: ShieldCheck, label: '隐私保护' },
           ].map((benefit, i) => (
             <div key={i} className="flex flex-col items-center gap-2">

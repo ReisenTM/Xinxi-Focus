@@ -93,7 +93,7 @@ export function ProfileScreen({ onLogout, onOpenSubscription }: ProfileScreenPro
                   <Sparkles className="w-4 h-4 text-primary" />
                 </motion.div>
               </div>
-              <p className="text-xs text-on-surface-variant font-medium">解锁所有高级功能与专属拼图</p>
+              <p className="text-xs text-on-surface-variant font-medium">解锁所有高级功能</p>
             </div>
             <div className="bg-primary text-on-primary text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full">
               立即开启

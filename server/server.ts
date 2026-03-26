@@ -29,6 +29,7 @@ app.use((req, _res, next) => {
 
 // Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/auth', verificationRoutes);
 app.use('/api/sessions', sessionRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/achievements', achievementRoutes);

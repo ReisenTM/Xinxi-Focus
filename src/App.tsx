@@ -13,7 +13,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { sessionsApi, FocusSession } from './lib/api';
 
 function AppContent() {
-  const { isLoggedIn, isLoading, logout } = useAuth();
+  const { isLoggedIn, isLoading, logout, refreshUser } = useAuth();
   const [showLogin, setShowLogin] = useState(false);
   const [activeTab, setActiveTab] = useState('focus');
   const [showSettings, setShowSettings] = useState(false);
@@ -27,6 +27,7 @@ function AppContent() {
     todayTotalSeconds: 0,
     todayCount: 0,
     weeklyData: {} as Record<string, number>,
+    trendPercentage: 0,
   });
 
   useEffect(() => {
@@ -37,13 +38,24 @@ function AppContent() {
     }
   }, [isDarkMode]);
 
-  // Load sessions when logged in
+  // Load sessions when logged in or from local storage when offline
   useEffect(() => {
     if (isLoggedIn) {
       loadSessions();
     } else {
-      setSessions([]);
-      setStats({ todayTotalSeconds: 0, todayCount: 0, weeklyData: {} });
+      // Load offline sessions
+      try {
+        const savedSessions = localStorage.getItem('focus_offline_sessions');
+        const savedStats = localStorage.getItem('focus_offline_stats');
+        if (savedSessions) setSessions(JSON.parse(savedSessions));
+        else setSessions([]);
+        
+        if (savedStats) setStats(JSON.parse(savedStats));
+        else setStats({ todayTotalSeconds: 0, todayCount: 0, weeklyData: {}, trendPercentage: 0 });
+      } catch (e) {
+        setSessions([]);
+        setStats({ todayTotalSeconds: 0, todayCount: 0, weeklyData: {}, trendPercentage: 0 });
+      }
     }
   }, [isLoggedIn]);
 
@@ -62,11 +74,48 @@ function AppContent() {
       try {
         const result = await sessionsApi.create(duration, type);
         setSessions(prev => [result.session, ...prev]);
-        // Refresh stats
-        loadSessions();
+        // Refresh stats & profile (for points)
+        await Promise.all([loadSessions(), refreshUser()]);
       } catch (err) {
         console.error('Failed to save session:', err);
       }
+    } else {
+      // Offline mode: generate new session
+      const now = new Date();
+      const newSession: FocusSession = {
+        id: Date.now().toString(),
+        duration,
+        type,
+        completedAt: now.toISOString(),
+        date: '今天', // Simplified for immediate UI display
+        time: now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false }),
+        fullDate: now.toISOString(),
+      };
+
+      setSessions(prev => {
+        const newSessions = [newSession, ...prev];
+        localStorage.setItem('focus_offline_sessions', JSON.stringify(newSessions));
+        return newSessions;
+      });
+
+      setStats(prev => {
+        const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+        let dayIndex = now.getDay() - 1;
+        if (dayIndex < 0) dayIndex = 6;
+        const dayKey = dayNames[dayIndex];
+
+        const newStats = {
+          todayTotalSeconds: prev.todayTotalSeconds + duration,
+          todayCount: prev.todayCount + 1,
+          trendPercentage: prev.trendPercentage,
+          weeklyData: {
+            ...prev.weeklyData,
+            [dayKey]: (prev.weeklyData[dayKey] || 0) + duration,
+          },
+        };
+        localStorage.setItem('focus_offline_stats', JSON.stringify(newStats));
+        return newStats;
+      });
     }
   };
 

@@ -120,6 +120,7 @@ export interface SessionsResponse {
     todayTotalSeconds: number;
     todayCount: number;
     weeklyData: Record<string, number>;
+    trendPercentage: number;
   };
 }
 

@@ -81,11 +81,26 @@ router.post('/login', async (req: Request, res: Response) => {
     }
 
     // Fetch profile
-    const { data: profile } = await supabaseAdmin
+    let { data: profile } = await supabaseAdmin
       .from('profiles')
       .select('*')
       .eq('id', data.user.id)
       .single();
+
+    // 如果在 auth.users 存在，但在 profiles 中被意外删除，则自动修复 (Self-healing)
+    if (!profile) {
+      console.log(`Profile not found for ${data.user.email}, auto-recreating...`);
+      const { data: newProfile } = await supabaseAdmin
+        .from('profiles')
+        .insert({
+          id: data.user.id,
+          display_name: data.user.user_metadata?.display_name || data.user.email?.split('@')[0],
+          avatar_url: `https://api.dicebear.com/7.x/open-peeps/svg?seed=${data.user.id}`,
+        })
+        .select('*')
+        .single();
+      profile = newProfile;
+    }
 
     return res.json({
       user: {

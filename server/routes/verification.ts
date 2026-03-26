@@ -30,10 +30,11 @@ function generateCode(): string {
 
 // 创建 nodemailer transporter
 function createTransporter() {
+  const port = Number(process.env.SMTP_PORT) || 465;
   return nodemailer.createTransport({
     host: process.env.SMTP_HOST || 'smtp.qq.com',
-    port: Number(process.env.SMTP_PORT) || 465,
-    secure: true,
+    port,
+    secure: port === 465, // true for 465, false for other ports
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,

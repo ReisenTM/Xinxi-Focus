@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { achievementsApi, Achievement } from '../lib/api';
 
 interface StatsScreenProps {
   sessions?: {
@@ -14,6 +15,7 @@ interface StatsScreenProps {
     todayTotalSeconds: number;
     todayCount: number;
     weeklyData: Record<string, number>;
+    trendPercentage: number;
   };
   onViewAllAchievements?: () => void;
   onViewAllHistory?: () => void;
@@ -36,6 +38,39 @@ export function StatsScreen({
   onViewAllHistory 
 }: StatsScreenProps) {
   const [isCalendarExpanded, setIsCalendarExpanded] = useState(false);
+
+  // 趋势计算
+  const trendPercent = stats?.trendPercentage || 0;
+  const trendSign = trendPercent > 0 ? '+' : '';
+  const trendText = `${trendSign}${trendPercent}% 较上周`;
+  const trendColor = trendPercent > 0 ? 'text-primary' : trendPercent < 0 ? 'text-[#F5A623]' : 'text-on-surface-variant';
+
+  // 成就状态
+  const [achievements, setAchievements] = useState<Achievement[]>([]);
+  const [totalAchievements, setTotalAchievements] = useState(12);
+  const [unlockedAchievements, setUnlockedAchievements] = useState(0);
+
+  useEffect(() => {
+    achievementsApi.list().then(res => {
+      setAchievements(res.achievements);
+      setTotalAchievements(res.totalCount);
+      setUnlockedAchievements(res.unlockedCount);
+    }).catch(console.error);
+  }, []);
+
+  const { activeMilestone, otherAchievements } = useMemo(() => {
+    if (achievements.length === 0) return { activeMilestone: null, otherAchievements: [] };
+    
+    // Active milestone: highest progress ratio < 1, or first one if none
+    const inProgress = achievements.filter(a => a.progress < a.total && a.progress > 0);
+    const ms = inProgress.length > 0 
+      ? inProgress.reduce((prev, curr) => (curr.progress / curr.total > prev.progress / prev.total) ? curr : prev)
+      : achievements.find(a => !a.unlocked) || achievements[0];
+
+    const others = achievements.filter(a => a.id !== ms.id).slice(0, 2);
+
+    return { activeMilestone: ms, otherAchievements: others };
+  }, [achievements]);
   const [viewDate, setViewDate] = useState(new Date());
 
   const currentMonth = viewDate.getMonth();
@@ -72,11 +107,12 @@ export function StatsScreen({
   const todayCount = stats?.todayCount || 0;
 
   const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-  const dayLabels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+  const dayLabels = ['一', '二', '三', '四', '五', '六', '日'];
   const maxWeekly = Math.max(1, ...dayNames.map(d => stats?.weeklyData[d] || 0));
   const todayDayIndex = new Date().getDay() - 1 < 0 ? 6 : new Date().getDay() - 1;
 
   const chartData = dayNames.map((d, i) => ({
+    id: d,
     day: dayLabels[i],
     height: `${Math.max(5, ((stats?.weeklyData[d] || 0) / maxWeekly) * 100)}%`,
     isToday: i === todayDayIndex,
@@ -120,15 +156,15 @@ export function StatsScreen({
       <section className="space-y-6">
         <div className="flex justify-between items-end">
           <h2 className="font-headline text-xl font-bold tracking-tight">本周专注趋势</h2>
-          <span className="text-primary font-label text-xs font-medium">
-            +12% 较上周
+          <span className={`${trendColor} font-label text-xs font-medium`}>
+            {trendText}
           </span>
         </div>
         <div className="bg-surface-container-lowest p-6 rounded-[2rem] shadow-[0_4px_48px_0_rgba(44,52,51,0.04)] border border-outline-variant/5">
           {/* Bars */}
           <div className="flex items-end justify-between h-32 gap-3 px-2 mb-6">
             {chartData.map((item) => (
-              <div key={item.day} className="flex-1 flex flex-col items-center h-full">
+              <div key={item.id} className="flex-1 flex flex-col items-center h-full">
                 <div className="w-full relative flex flex-col justify-end h-full">
                   <motion.div
                     initial={{ height: 0 }}
@@ -241,62 +277,63 @@ export function StatsScreen({
         <div className="flex justify-between items-end">
           <h2 className="font-headline text-xl font-bold tracking-tight">成就勋章</h2>
           <span className="text-on-surface-variant font-label text-xs">
-            已解锁 3 / 12
+            已解锁 {unlockedAchievements} / {totalAchievements}
           </span>
         </div>
         
         <div className="grid grid-cols-1 gap-4">
           {/* Active Milestone */}
-          <div className="bg-primary/5 rounded-2xl p-6 border border-primary/10 relative overflow-hidden">
-            <div className="flex items-center gap-4 mb-4">
-              <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center shrink-0">
-                <span className="material-symbols-outlined text-primary text-2xl" style={{ fontVariationSettings: '"FILL" 1' }}>
-                  emoji_events
+          {activeMilestone && (
+            <div className="bg-primary/5 rounded-2xl p-6 border border-primary/10 relative overflow-hidden">
+              <div className="flex items-center gap-4 mb-4">
+                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center shrink-0">
+                  <span className="material-symbols-outlined text-primary text-2xl" style={{ fontVariationSettings: '"FILL" 1' }}>
+                    {activeMilestone.icon}
+                  </span>
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-headline font-bold text-on-surface">{activeMilestone.title}</h3>
+                  <p className="text-on-surface-variant text-xs">{activeMilestone.description}</p>
+                </div>
+                <span className={`text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider ${
+                  activeMilestone.unlocked ? 'bg-[#07C160]/10 text-[#07C160]' : 'bg-primary text-on-primary'
+                }`}>
+                  {activeMilestone.unlocked ? '已解锁' : '进行中'}
                 </span>
               </div>
-              <div className="flex-1">
-                <h3 className="font-headline font-bold text-on-surface">静心者</h3>
-                <p className="text-on-surface-variant text-xs">连续专注 5 天</p>
-              </div>
-              <span className="bg-primary text-on-primary text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-wider">
-                进行中
-              </span>
-            </div>
-            <div className="space-y-2">
-              <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">
-                <span>进度</span>
-                <span>80%</span>
-              </div>
-              <div className="h-1.5 w-full bg-primary/10 rounded-full overflow-hidden">
-                <motion.div 
-                  initial={{ width: 0 }}
-                  animate={{ width: '80%' }}
-                  className="h-full bg-primary rounded-full"
-                />
+              <div className="space-y-2">
+                <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-on-surface-variant">
+                  <span>进度</span>
+                  <span>{Math.round((activeMilestone.progress / activeMilestone.total) * 100)}%</span>
+                </div>
+                <div className="h-1.5 w-full bg-primary/10 rounded-full overflow-hidden">
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: `${Math.min(100, (activeMilestone.progress / activeMilestone.total) * 100)}%` }}
+                    className="h-full bg-primary rounded-full"
+                  />
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Other Achievements Grid */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="bg-surface-container-lowest p-4 rounded-2xl border border-outline-variant/10 flex flex-col items-center text-center gap-2">
-              <div className="w-10 h-10 bg-surface-container-low rounded-full flex items-center justify-center">
-                <span className="material-symbols-outlined text-on-surface-variant text-xl">
-                  nightlight
-                </span>
+            {otherAchievements.map(achi => (
+              <div key={achi.id} className={`p-4 rounded-2xl border flex flex-col items-center text-center gap-2 ${
+                achi.unlocked ? 'bg-primary/5 border-primary/20' : 'bg-surface-container-lowest border-outline-variant/10'
+              }`}>
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                  achi.unlocked ? 'bg-primary/10 text-primary' : 'bg-surface-container-low text-on-surface-variant'
+                }`}>
+                  <span className="material-symbols-outlined text-xl" style={{ fontVariationSettings: achi.unlocked ? '"FILL" 1' : '"FILL" 0' }}>
+                    {achi.icon}
+                  </span>
+                </div>
+                <h4 className="text-xs font-bold">{achi.title}</h4>
+                <p className="text-[10px] text-on-surface-variant">{achi.description}</p>
               </div>
-              <h4 className="text-xs font-bold">夜猫子</h4>
-              <p className="text-[10px] text-on-surface-variant">在午夜后专注</p>
-            </div>
-            <div className="bg-surface-container-lowest p-4 rounded-2xl border border-outline-variant/10 flex flex-col items-center text-center gap-2">
-              <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                <span className="material-symbols-outlined text-primary text-xl" style={{ fontVariationSettings: '"FILL" 1' }}>
-                  workspace_premium
-                </span>
-              </div>
-              <h4 className="text-xs font-bold">专注大师</h4>
-              <p className="text-[10px] text-on-surface-variant">单次专注 60 分钟</p>
-            </div>
+            ))}
           </div>
         </div>
 

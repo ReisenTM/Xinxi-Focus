@@ -53,6 +53,28 @@ router.get('/', async (req: AuthenticatedRequest, res: Response) => {
       .eq('user_id', req.userId!)
       .gte('completed_at', weekStart.toISOString());
 
+    // 获取上周统计
+    const lastWeekStart = new Date(weekStart);
+    lastWeekStart.setDate(lastWeekStart.getDate() - 7);
+    
+    const { data: lastWeekSessions } = await supabaseAdmin
+      .from('focus_sessions')
+      .select('duration')
+      .eq('user_id', req.userId!)
+      .gte('completed_at', lastWeekStart.toISOString())
+      .lt('completed_at', weekStart.toISOString());
+
+    const lastWeekTotalSeconds = (lastWeekSessions || []).reduce((sum, s) => sum + s.duration, 0);
+    const thisWeekTotalSeconds = (weekSessions || []).reduce((sum, s) => sum + s.duration, 0);
+
+    // 计算趋势百分比 (trendPercentage)
+    let trendPercentage = 0;
+    if (lastWeekTotalSeconds === 0) {
+      trendPercentage = thisWeekTotalSeconds > 0 ? 100 : 0;
+    } else {
+      trendPercentage = Math.round(((thisWeekTotalSeconds - lastWeekTotalSeconds) / lastWeekTotalSeconds) * 100);
+    }
+
     // 按天分组本周数据
     const weeklyData: Record<string, number> = {};
     const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -82,6 +104,7 @@ router.get('/', async (req: AuthenticatedRequest, res: Response) => {
         todayTotalSeconds,
         todayCount,
         weeklyData,
+        trendPercentage,
       },
     });
   } catch (err) {
