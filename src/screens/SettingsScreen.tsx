@@ -192,7 +192,10 @@ export function SettingsScreen({ onBack, isDarkMode, onToggleDarkMode, onLogout,
   const helpContent = (
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-4">
-        <button className="flex items-center gap-4 p-4 bg-surface-container-lowest rounded-2xl border border-outline-variant/10 hover:bg-surface-container-low transition-colors text-left">
+        <button 
+          onClick={() => window.location.href = 'mailto:support@focus-app.com?subject=心隙专注 - 用户反馈'}
+          className="flex items-center gap-4 p-4 bg-surface-container-lowest rounded-2xl border border-outline-variant/10 hover:bg-surface-container-low transition-colors text-left"
+        >
           <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
             <Mail className="w-5 h-5 text-primary" />
           </div>
