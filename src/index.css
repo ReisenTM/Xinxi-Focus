@@ -1,0 +1,77 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: #f9f9f8;
+  --color-on-background: #2c3433;
+  --color-surface: #f9f9f8;
+  --color-on-surface: #2c3433;
+  --color-surface-variant: #dce4e3;
+  --color-on-surface-variant: #586160;
+  --color-primary: #4f6359;
+  --color-on-primary: #e6fdf0;
+  --color-primary-container: #d1e8db;
+  --color-on-primary-container: #42564c;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f1f4f3;
+  --color-surface-container: #eaefee;
+  --color-surface-container-high: #e3e9e8;
+  --color-surface-container-highest: #dce4e3;
+  --color-outline-variant: #abb4b3;
+  --color-error: #9f403d;
+  --color-error-container: #ffdad6;
+  --color-on-error-container: #410002;
+  --color-primary-fixed-dim: #c3dacd;
+  --color-glass: rgba(249, 249, 248, 0.85);
+
+  --font-headline: 'Manrope', sans-serif;
+  --font-body: 'Inter', sans-serif;
+  --font-label: 'Inter', sans-serif;
+}
+
+.dark {
+  --color-background: #191c1b;
+  --color-on-background: #e1e3e0;
+  --color-surface: #191c1b;
+  --color-on-surface: #e1e3e0;
+  --color-surface-variant: #3f4947;
+  --color-on-surface-variant: #bfc9c6;
+  --color-primary: #b1ccc0;
+  --color-on-primary: #1d352c;
+  --color-primary-container: #334b41;
+  --color-on-primary-container: #cde8db;
+  --color-surface-container-lowest: #0c0f0e;
+  --color-surface-container-low: #1c1f1e;
+  --color-surface-container: #202322;
+  --color-surface-container-high: #2a2e2c;
+  --color-surface-container-highest: #353937;
+  --color-outline-variant: #3f4947;
+  --color-error: #ffb4ab;
+  --color-error-container: #93000a;
+  --color-on-error-container: #ffdad6;
+  --color-primary-fixed-dim: #2d443a;
+  --color-glass: rgba(25, 28, 27, 0.85);
+}
+
+@layer utilities {
+  .material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 300, 'GRAD' 0, 'opsz' 24;
+  }
+  .glass-nav {
+    background-color: var(--color-glass);
+    backdrop-filter: blur(24px);
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+body {
+  background-color: var(--color-background);
+  color: var(--color-on-surface);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
